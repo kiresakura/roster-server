@@ -1,5 +1,7 @@
 # Roster
 
+[![CI](https://github.com/kiresakura/roster-server/actions/workflows/ci.yml/badge.svg)](https://github.com/kiresakura/roster-server/actions/workflows/ci.yml)
+
 A **Telegram-driven team task, reminder, and leave-management service**.
 
 Roster keeps a small team accountable without anyone living in a dashboard:
@@ -41,6 +43,46 @@ Supervisor ──creates──▶  Task (recurring, multi-assignee, importance)
 ## Architecture
 
 A clean, layered NestJS application:
+
+```mermaid
+flowchart TB
+  client(["Web client"])
+  tguser(["Telegram user"])
+
+  subgraph edge["Edge"]
+    api["GraphQL API<br/>(roster.resolver)"]
+    wh["Telegram webhook<br/>(constant-time secret, fail-closed)"]
+  end
+
+  subgraph services["Application services"]
+    svc["TaskService · LeaveService<br/>ReminderService · DailyReviewService<br/>TelegramService"]
+  end
+
+  subgraph domain["Domain — pure, unit-tested (23 tests)"]
+    dom["recurrence · completion · validation<br/>leave · daily-review"]
+  end
+
+  repos["Repositories<br/>(Prisma, @Transactional)"]
+  pg[("PostgreSQL")]
+
+  subgraph async["Async work"]
+    sched["Scheduler (@Cron)<br/>per-min reminder · 5-min overdue · daily review"]
+    queue[["BullMQ queue · Redis"]]
+    proc["Queue processor"]
+  end
+
+  tgapi(["Telegram Bot API"])
+
+  client -->|"GraphQL + JWT"| api
+  tguser -->|"webhook"| wh
+  api --> svc
+  wh --> svc
+  svc --> dom
+  svc --> repos --> pg
+  sched --> svc
+  svc -->|"enqueue"| queue --> proc --> tgapi
+  proc --> repos
+```
 
 | Layer | Path | Responsibility |
 |---|---|---|
