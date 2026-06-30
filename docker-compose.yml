@@ -1,0 +1,35 @@
+# Local dependencies for Roster: Postgres + Redis.
+#   docker compose up -d
+# Then: cp .env.example .env && npm install && npm run prisma:migrate && npm run start:dev
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: roster
+      POSTGRES_PASSWORD: roster
+      POSTGRES_DB: roster
+    ports:
+      - '5432:5432'
+    volumes:
+      - roster_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U roster']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - roster_redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  roster_pg:
+  roster_redis:

@@ -1,0 +1,33 @@
+# ─── Secrets — never commit (defense in depth; also enable GitHub Push Protection) ───
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+*.private.key
+*.secret
+secrets/
+
+# ─── Node ───
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.eslintcache
+
+# ─── Prisma ───
+# generated client lives under node_modules; keep migrations tracked.
+
+# ─── Logs ───
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# ─── OS / editor ───
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

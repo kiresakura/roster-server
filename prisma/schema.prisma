@@ -1,0 +1,144 @@
+// Roster — Prisma schema.
+// A standalone team task / reminder / leave-management data model.
+// Postgres, Prisma 5.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// ─────────────────────────── Enums ───────────────────────────
+
+enum TaskType {
+  TASK
+  REMINDER
+}
+
+enum CompletionMode {
+  ANY
+  ALL
+}
+
+enum TaskStatus {
+  OPEN
+  COMPLETED
+  OVERDUE
+  CANCELLED
+}
+
+enum AssignmentStatus {
+  NOT_STARTED
+  COMPLETED
+  SKIPPED_ON_LEAVE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+/// ─────────────────────────── Models ──────────────────────────
+
+/// A member of the team. Authentication is intentionally minimal — this
+/// service is meant to sit behind your own identity provider; the bundled
+/// password login exists so the project runs standalone.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String?  @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdTasks   Task[]           @relation("TaskCreator")
+  assignments    TaskAssignment[]
+  pref           UserPref?
+  leaveRequests  LeaveRequest[]   @relation("LeaveOwner")
+  reviewedLeaves LeaveRequest[]   @relation("LeaveReviewer")
+
+  @@map("users")
+}
+
+model Task {
+  id             String          @id @default(cuid())
+  creatorId      String          @map("creator_id")
+  title          String
+  description    String?
+  type           TaskType        @default(TASK)
+  importance     Boolean         @default(false)
+  completionMode CompletionMode? @map("completion_mode")
+  startAt        DateTime        @map("start_at") @db.Timestamptz(3)
+  dueAt          DateTime?       @map("due_at") @db.Timestamptz(3)
+  recurrence     Json?
+  parentTaskId   String?         @map("parent_task_id")
+  status         TaskStatus      @default(OPEN)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  creator     User             @relation("TaskCreator", fields: [creatorId], references: [id])
+  parent      Task?            @relation("TaskRecurrenceParent", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  children    Task[]           @relation("TaskRecurrenceParent")
+  assignments TaskAssignment[]
+
+  @@index([startAt])
+  @@index([type, status])
+  @@index([parentTaskId])
+  @@map("tasks")
+}
+
+model TaskAssignment {
+  id         String           @id @default(cuid())
+  taskId     String           @map("task_id")
+  userId     String           @map("user_id")
+  status     AssignmentStatus @default(NOT_STARTED)
+  reportedAt DateTime?        @map("reported_at") @db.Timestamptz(3)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([userId, status])
+  @@map("task_assignments")
+}
+
+model UserPref {
+  userId              String   @id @map("user_id")
+  isSupervisor        Boolean  @default(false) @map("is_supervisor")
+  telegramChatId      String?  @unique @map("telegram_chat_id")
+  telegramBindToken   String?  @unique @map("telegram_bind_token")
+  reminderLeadMinutes Int      @default(30) @map("reminder_lead_minutes")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_prefs")
+}
+
+model LeaveRequest {
+  id         String      @id @default(cuid())
+  userId     String      @map("user_id")
+  startAt    DateTime    @map("start_at") @db.Timestamptz(3)
+  endAt      DateTime    @map("end_at") @db.Timestamptz(3)
+  reason     String?
+  status     LeaveStatus @default(PENDING)
+  reviewerId String?     @map("reviewer_id")
+  reviewedAt DateTime?   @map("reviewed_at") @db.Timestamptz(3)
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user     User  @relation("LeaveOwner", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("LeaveReviewer", fields: [reviewerId], references: [id])
+
+  @@index([userId, startAt, endAt])
+  @@index([status])
+  @@map("leave_requests")
+}
