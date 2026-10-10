@@ -4,7 +4,7 @@
   "description": "Roster — a Telegram-driven team task, reminder and leave-management service.",
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.12"
   },
   "scripts": {
     "postinstall": "prisma generate",

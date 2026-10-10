@@ -4,9 +4,11 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
+import { loadEnvFileIfPresent } from './config/env-file';
 import { RosterConfig } from './config/roster-config';
 
 async function bootstrap(): Promise<void> {
+  loadEnvFileIfPresent();
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.enableShutdownHooks();
