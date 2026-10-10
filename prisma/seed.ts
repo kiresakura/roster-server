@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 
 import { AuthService } from '../src/auth/auth.service';
+import { loadEnvFileIfPresent } from '../src/config/env-file';
 
+loadEnvFileIfPresent();
 const prisma = new PrismaClient();
 
 /// Seeds two demo accounts (password: `password123`) so you can log in and
