@@ -17,7 +17,9 @@ export class JobQueue {
     opts?: { jobId?: string }
   ): Promise<unknown> {
     return this.queue.add(name, payload, {
-      jobId: opts?.jobId,
+      // BullMQ 5 拒收含 `:` 的自訂 jobId（"Custom Id cannot contain :"），統一換成 `_`；
+      // 同樣的輸入仍得到同樣的 id，去重效果不變。
+      jobId: opts?.jobId?.replaceAll(':', '_'),
       removeOnComplete: 1000,
       removeOnFail: 5000,
     });
