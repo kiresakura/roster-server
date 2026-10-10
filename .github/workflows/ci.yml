@@ -36,3 +36,7 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # nest-cli 重建前會清空 dist/；第二次建置仍須輸出完整產物。
+      - name: Rebuild
+        run: npm run build && test -f dist/app.module.js
