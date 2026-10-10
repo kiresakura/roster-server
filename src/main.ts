@@ -1,16 +1,17 @@
 import 'reflect-metadata';
 
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
+import { createValidationPipe } from './common/validation-pipe';
 import { loadEnvFileIfPresent } from './config/env-file';
 import { RosterConfig } from './config/roster-config';
 
 async function bootstrap(): Promise<void> {
   loadEnvFileIfPresent();
   const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  app.useGlobalPipes(createValidationPipe());
   app.enableShutdownHooks();
 
   const config = app.get(RosterConfig);
